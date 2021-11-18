@@ -3,6 +3,8 @@ from ttkbootstrap import *
 import pathlib
 import hashlib
 import os
+from datetime import datetime
+import json
 
 # Constants
 WINDOW_SIZE = "450x380"
@@ -11,7 +13,9 @@ FONT_COLOR = "#FFFFFF"
 PATH = pathlib.Path(__file__).parent.resolve() # Path to this project folder.
 DELETE = False
 SYSTEM = ""
-hashed_data = []
+data = {}
+now = datetime.now()
+current_hour = now.strftime("%H:%M:%S")
 
 # We need a function to delete every Label when we make a new one to replace it. 
 def clear(function):
@@ -23,6 +27,12 @@ def clear(function):
 # We need a function to bind the keyboard.
 def enter_bind(event):
     get_text()
+
+# Function to put text in the disabled entry's.
+def insert_text(entry, text):
+    entry.config(state = NORMAL)
+    entry.insert(0,'')
+    entry.insert(0,text)
 
 # This is where we need to put 
 def get_text():
@@ -48,35 +58,54 @@ def get_text():
     
         # We consider this a success!
         finished_hash = ttk.Label(hasher, text = 'Hash Complete!', style='success.TLabel', font=('Helvetica', 12, 'bold'))
-        finished_hash.pack()
-
-        hashed_data.append(text)
+        finished_hash.pack(pady = 10)
 
         if hashed_hexadecimal.get() and hashed_digest.get() != '':
             hashed_hexadecimal.delete(0, 'end')
             hashed_digest.delete(0, 'end')
-            
-        hashed_hexadecimal.config(state = NORMAL)
-        hashed_hexadecimal.insert(0,'')
-        hashed_hexadecimal.insert(0,text)
+        
+        insert_text(hashed_hexadecimal, text)
+        insert_text(hashed_digest, bytes_equivalent)
 
-        hashed_digest.config(state = NORMAL)
-        hashed_digest.insert(0,'')
-        hashed_digest.insert(0,bytes_equivalent)
+        now = datetime.now()
+        current_hour = now.strftime("%H:%M:%S")
+
+        data[current_hour] = text
+        print(data)
 
         DELETE = True  
 
 def export_data():
-    pass
+    global DELETE, finished_hash
+
+    save=json.dumps(data,indent=4)
+    file=open(f"{PATH}/exports/Work from {now}.json","w")
+
+    file.write(save)
+    file.close()
+
+    if DELETE == False:
+        pass
+    else:
+        clear(finished_hash)
+
+    finished_hash = ttk.Label(hasher, text = 'JSON Exported!', style='success.TLabel', font=('Helvetica', 12, 'bold'))
+    finished_hash.pack(pady = 10)
+
+    DELETE = True
 
 def main_window():
-    global to_hash, root, hashed_hexadecimal, hashed_digest , hasher
+    global to_hash, root, to_hash, hashed_hexadecimal, hashed_digest , hasher
 
     # Window Style Configuration
     
     style = Style()
     style.theme_use('darkly')
     root = style.master
+
+    # Initial Run
+
+    data[now.strftime("%d/%b/%Y")] = f"logged at {current_hour}"
 
     # Window Configuration
 
@@ -126,6 +155,8 @@ def main_window():
     root.bind('<Return>', enter_bind) # This is just a bind to the enter button.
 
     accept_button = Button(hasher, text = 'Hash it!' , font = ('Helvica',10,'bold'), command = get_text)
-    accept_button.pack(pady = 10)
+    accept_button.place(x = 110, y = 290)
+    save_button = Button(hasher, text = 'Export JSON!' , font = ('Helvica',10,'bold'), command = export_data)
+    save_button.place(x = 200, y = 290)
 
     root.mainloop()
